@@ -1,0 +1,80 @@
+Hard
+
+Facebook
+This is the same question as problem #23 in the SQL Chapter of Ace the Data Science Interview!
+
+Assume you're given a table containing information on Facebook user actions. Write a query to obtain number of monthly active users (MAUs) in July 2022, including the month in numerical format "1, 2, 3".
+
+Hint:
+
+An active user is defined as a user who has performed actions such as 'sign-in', 'like', or 'comment' in both the current month and the previous month.
+user_actions Table:
+Column Name	Type
+user_id	integer
+event_id	integer
+event_type	string ("sign-in, "like", "comment")
+event_date	datetime
+user_actionsExample Input:
+user_id	event_id	event_type	event_date
+445	7765	sign-in	05/31/2022 12:00:00
+742	6458	sign-in	06/03/2022 12:00:00
+445	3634	like	06/05/2022 12:00:00
+742	1374	comment	06/05/2022 12:00:00
+648	3124	like	06/18/2022 12:00:00
+Example Output for June 2022:
+month	monthly_active_users
+6	1
+Example
+In June 2022, there was only one monthly active user (MAU) with the user_id 445.
+
+Please note that the output provided is for June 2022 as the user_actions table only contains event dates for that month. You should adapt the solution accordingly for July 2022.
+
+The dataset you are querying against may have different input & output - this is just an example!
+........................................................
+
+
+
+
+Solution
+In order to calculate the active user retention, we need to identify users who were active in both the current month and the previous month. We can approach this in two steps:
+
+Step 1: Find users who were active in the previous month
+To accomplish this, we can use the following code:
+
+SELECT last_month.user_id 
+FROM user_actions AS last_month
+WHERE last_month.user_id = curr_month.user_id
+  AND EXTRACT(MONTH FROM last_month.event_date) =
+  EXTRACT(MONTH FROM curr_month.event_date - interval '1 month'
+We alias the user_actions table as last_month in the FROM clause to indicate that this table contains information from the previous month.
+In the WHERE clause, we match users in the last_month table to the curr_month table based on user ID.
+EXTRACT(MONTH FROM last_month.event_date) = EXTRACT(MONTH FROM curr_month.event_date - interval '1 month') means that a particular user from the last month exists in the current month, indicating that this user was active in both months.
+- interval '1 month' subtracts one month from the current month's date to give us last month's date.
+Important: Please note that you won't be able to run this query on its own, as it references another table curr_month which is not included in this query. We will provide you with the complete query to run later. For now, focus on understanding the logic behind the solution."
+
+Step 2: Find users who are active in the current month and also existed in the previous month
+To accomplish this, we use the EXISTS operator to check for users in the current month who also exist in the subquery, which represents active users in the previous month (identified in Step 1). Note that the user_actions table is aliased as curr_month to indicate that this represents the current month's user information.
+
+To extract the month information from the event_date column, we use the EXTRACT function. Then, we use a COUNT DISTINCT over the user_id to obtain the count of monthly active users for the current month.
+
+Here's the complete query to run in the editor:
+
+SELECT 
+  EXTRACT(MONTH FROM curr_month.event_date) AS mth, 
+  COUNT(DISTINCT curr_month.user_id) AS monthly_active_users 
+FROM user_actions AS curr_month
+WHERE EXISTS (
+  SELECT last_month.user_id 
+  FROM user_actions AS last_month
+  WHERE last_month.user_id = curr_month.user_id
+    AND EXTRACT(MONTH FROM last_month.event_date) =
+    EXTRACT(MONTH FROM curr_month.event_date - interval '1 month')
+)
+  AND EXTRACT(MONTH FROM curr_month.event_date) = 7
+  AND EXTRACT(YEAR FROM curr_month.event_date) = 2022
+GROUP BY EXTRACT(MONTH FROM curr_month.event_date);
+Results:
+
+month	monthly_active_users
+7	2
+In July 2022, there are only 2 distinct users who are active in both the previous month and the current month.
