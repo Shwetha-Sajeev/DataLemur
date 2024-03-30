@@ -1,0 +1,99 @@
+Medium
+
+Google
+This is the same question as problem #28 in the SQL Chapter of Ace the Data Science Interview!
+
+Assume you're given a table with measurement values obtained from a Google sensor over multiple days with measurements taken multiple times within each day.
+
+Write a query to calculate the sum of odd-numbered and even-numbered measurements separately for a particular day and display the results in two different columns. Refer to the Example Output below for the desired format.
+
+Definition:
+
+Within a day, measurements taken at 1st, 3rd, and 5th times are considered odd-numbered measurements, and measurements taken at 2nd, 4th, and 6th times are considered even-numbered measurements.
+Effective April 15th, 2023, the question and solution for this question have been revised.
+
+measurements Table:
+Column Name	Type
+measurement_id	integer
+measurement_value	decimal
+measurement_time	datetime
+measurements Example Input:
+measurement_id	measurement_value	measurement_time
+131233	1109.51	07/10/2022 09:00:00
+135211	1662.74	07/10/2022 11:00:00
+523542	1246.24	07/10/2022 13:15:00
+143562	1124.50	07/11/2022 15:00:00
+346462	1234.14	07/11/2022 16:45:00
+Example Output:
+measurement_day	odd_sum	even_sum
+07/10/2022 00:00:00	2355.75	1662.74
+07/11/2022 00:00:00	1124.50	1234.14
+Explanation
+Based on the results,
+
+On 07/10/2022, the sum of the odd-numbered measurements is 2355.75, while the sum of the even-numbered measurements is 1662.74.
+On 07/11/2022, there are only two measurements available. The sum of the odd-numbered measurements is 1124.50, and the sum of the even-numbered measurements is 1234.14.
+The dataset you are querying against may have different input & output - this is just an example!
+
+p.s. read this blog post for more Google SQL Interview Questions
+......................................................
+
+
+
+
+Solution
+To solve this question, we follow these steps:
+
+Step 1: Ordering and Partitioning
+
+We first order the measurements based on their measurement time and partition them by day using the ROW_NUMBER window function. This helps us establish the order of measurements within each day:
+
+SELECT 
+  CAST(measurement_time AS DATE) AS measurement_day, 
+  measurement_value, 
+  ROW_NUMBER() OVER (
+    PARTITION BY CAST(measurement_time AS DATE) 
+    ORDER BY measurement_time) AS measurement_num 
+  FROM measurements;
+It is important to use measurement_time in the ORDER BY clause of the window function to ensure that the measurements are ordered within each day based on the actual measurement's time. This will ensure that the row numbering (measurement_num) is accurate and reflects the chronological order of the measurements within each day.
+
+Showing the first 5 rows of output:
+
+measurement_day	measurement_value	measurement_num
+07/10/2022 00:00:00	1109.51	1
+07/10/2022 00:00:00	1662.74	2
+07/10/2022 00:00:00	1246.24	3
+07/11/2022 00:00:00	1124.50	1
+07/11/2022 00:00:00	1234.14	2
+Step 2 & 3: Filtering and Summing
+
+To filter for odd and even numbers, we can use the following two methods:
+
+Modulus operator (%): Use measurement_num % 2 != 0 to check if the result is 1, indicating odd numbers or measurement_num % 2 = 0 with a result of 1 for even numbers.
+MOD(): Use MOD(measurement_num, 2) != 0 to find odd results and MOD(measurement_num, 2) = 0 for even results.
+Note: The modulus operator % returns the remainder of a division. When we divide an even number by 2, the remainder is always 0, whereas dividing an odd number will result in a non-zero value.
+
+Finally, we can apply the modulus concept to the aggregate function SUM() along with the FILTER clause, summing over the corresponding measurement_value.
+
+WITH ranked_measurements AS (
+  SELECT 
+    CAST(measurement_time AS DATE) AS measurement_day, 
+    measurement_value, 
+    ROW_NUMBER() OVER (
+      PARTITION BY CAST(measurement_time AS DATE) 
+      ORDER BY measurement_time) AS measurement_num 
+  FROM measurements
+) 
+
+SELECT 
+  measurement_day, 
+  SUM(measurement_value) FILTER (WHERE measurement_num % 2 != 0) AS odd_sum, 
+  SUM(measurement_value) FILTER (WHERE measurement_num % 2 = 0) AS even_sum 
+FROM ranked_measurements
+GROUP BY measurement_day;
+Results:
+
+measurement_day	odd_sum	even_sum
+07/10/2022 00:00:00	2355.75	1662.74
+07/11/2022 00:00:00	2377.12	2480.70
+07/12/2022 00:00:00	2903.40	1244.30
