@@ -1,0 +1,137 @@
+Medium
+
+Verizon
+A phone call is considered an international call when the person calling is in a different country than the person receiving the call.
+
+What percentage of phone calls are international? Round the result to 1 decimal.
+
+Assumption:
+
+The caller_id in phone_info table refers to both the caller and receiver.
+phone_calls Table:
+Column Name	Type
+caller_id	integer
+receiver_id	integer
+call_time	timestamp
+phone_calls Example Input:
+caller_id	receiver_id	call_time
+1	2	2022-07-04 10:13:49
+1	5	2022-08-21 23:54:56
+5	1	2022-05-13 17:24:06
+5	6	2022-03-18 12:11:49
+phone_info Table:
+Column Name	Type
+caller_id	integer
+country_id	integer
+network	integer
+phone_number	string
+phone_info Example Input:
+caller_id	country_id	network	phone_number
+1	US	Verizon	+1-212-897-1964
+2	US	Verizon	+1-703-346-9529
+3	US	Verizon	+1-650-828-4774
+4	US	Verizon	+1-415-224-6663
+5	IN	Vodafone	+91 7503-907302
+6	IN	Vodafone	+91 2287-664895
+Example Output:
+international_calls_pct
+50.0
+Explanation
+There is a total of 4 calls with 2 of them being international calls (from caller_id 1 => receiver_id 5, and caller_id 5 => receiver_id 1). Thus, 2/4 = 50.0%
+
+The dataset you are querying against may have different input & output - this is just an example!
+......................................................
+
+
+
+
+Solution
+Step 1: Join the tables to obtain the caller's and receiver's country information
+To determine whether a call is international or not, we need country_id for both caller and receiver. This can be achieved by joining phone_info twice, first for the caller, and second for the receiver.
+
+SELECT  
+  caller.country_id AS caller_country,
+  receiver.country_id AS receiver_country
+FROM phone_calls AS calls
+LEFT JOIN phone_info AS caller
+  ON calls.caller_id = caller.caller_id
+LEFT JOIN phone_info AS receiver
+  ON calls.receiver_id = receiver.caller_id;
+Step 2: Count the international calls and the total number of calls
+After obtaining the necessary info, we can start with the calculation. To do so, we need 2 metrics:
+
+number of total calls
+number of international calls
+Getting the number of total calls is easy with COUNT(*).
+
+As for the number of international calls, we can use the CASE statement to check if the caller's country is different from the receiver's country. If it is, assign the value of 1 for international calls, otherwise NULL for non-international calls. This is known as a conditional count function.
+
+Then, we wrap the CASE statement with either SUM() or COUNT() to add up the numbers with a value of 1 to obtain the count of international calls.
+
+SELECT 
+  SUM(CASE 
+    WHEN caller.country_id <> receiver.country_id THEN 1 ELSE NULL END) AS international_calls,
+  COUNT(*) AS total_calls
+FROM phone_calls AS calls
+LEFT JOIN phone_info caller
+  ON calls.caller_id=caller.caller_id
+LEFT JOIN phone_info receiver
+  ON calls.receiver_id=receiver.caller_id;
+caller_country	receiver_country	international
+DE	US	1
+US	US	0
+IN	IN	0
+Step 3: Calculate the percentage of international calls
+For the final step, we calculate the percentage of international calls. To obtain this, divide the count of international calls by the total.
+
+However, it is important to multiply this result with 100.0 (instead of 100) due to integer division. To elaborate, as both numbers are integers, the result would be also an integer, truncating the decimals from the result.
+
+Lastly, round the result to 1 decimal.
+
+We are done, good job!
+
+SELECT 
+  ROUND(
+    100.0 * SUM(CASE
+      WHEN caller.country_id <> receiver.country_id THEN 1 ELSE NULL END)
+    /COUNT(*) ,1) AS international_call_pct
+FROM phone_calls AS calls
+LEFT JOIN phone_info AS caller
+  ON calls.caller_id = caller.caller_id
+LEFT JOIN phone_info AS receiver
+  ON calls.receiver_id = receiver.caller_id;
+Solution #2: Using FILTER Calling out user @acejetman12345 for this fantastic solution using FILTER, which we have adapted slightly.
+
+SELECT 
+  ROUND(
+    100.0 * COUNT(*) FILTER (
+      WHERE caller.country_id <> receiver.country_id) 
+  / COUNT(*), 1) AS international_calls_pct
+FROM phone_calls AS calls
+LEFT JOIN phone_info AS caller
+  ON calls.caller_id = caller.caller_id
+LEFT JOIN phone_info AS receiver
+  ON calls.receiver_id = receiver.caller_id;
+Solution #3: Using CTE
+
+Instead of filtering the caller.country_id <> receiver.country_id in the CASE statement, we're doing it in the WHERE clause.
+
+WITH international_calls AS (
+SELECT 
+  caller.caller_id, 
+  caller.country_id,
+  receiver.caller_id, 
+  receiver.country_id
+FROM phone_calls AS calls
+LEFT JOIN phone_info AS caller
+  ON calls.caller_id = caller.caller_id
+LEFT JOIN phone_info AS receiver
+  ON calls.receiver_id = receiver.caller_id
+WHERE caller.country_id <> receiver.country_id
+)
+
+SELECT 
+  ROUND(
+    100.0 * COUNT(*)
+  / (SELECT COUNT(*) FROM phone_calls),1) AS international_call_pct
+FROM international_calls;
