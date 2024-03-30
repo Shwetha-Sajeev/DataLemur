@@ -1,0 +1,113 @@
+Medium
+
+Twitter
+This is the same question as problem #10 in the SQL Chapter of Ace the Data Science Interview!
+
+Given a table of tweet data over a specified time period, calculate the 3-day rolling average of tweets for each user. Output the user ID, tweet date, and rolling averages rounded to 2 decimal places.
+
+Notes:
+
+A rolling average, also known as a moving average or running mean is a time-series technique that examines trends in data over a specified period of time.
+In this case, we want to determine how the tweet count for each user changes over a 3-day period.
+Effective April 7th, 2023, the problem statement, solution and hints for this question have been revised.
+
+tweets Table:
+Column Name	Type
+user_id	integer
+tweet_date	timestamp
+tweet_count	integer
+tweets Example Input:
+user_id	tweet_date	tweet_count
+111	06/01/2022 00:00:00	2
+111	06/02/2022 00:00:00	1
+111	06/03/2022 00:00:00	3
+111	06/04/2022 00:00:00	4
+111	06/05/2022 00:00:00	5
+Example Output:
+user_id	tweet_date	rolling_avg_3d
+111	06/01/2022 00:00:00	2.00
+111	06/02/2022 00:00:00	1.50
+111	06/03/2022 00:00:00	2.00
+111	06/04/2022 00:00:00	2.67
+111	06/05/2022 00:00:00	4.00
+The dataset you are querying against may have different input & output - this is just an example!
+........................................
+
+
+
+
+Solution
+Step 1: Calculate the average tweet count for each user
+To obtain the average rolling average tweet count for each user, we use the following query which calculates the average tweet count for each user ID and date using AVG() window function.
+
+SELECT
+  user_id,
+  tweet_date,
+  AVG(tweet_count) OVER (
+    PARTITION BY user_id
+    ORDER BY tweet_date) AS rolling_avg_3d 
+FROM tweets;
+Output showing the first 5 rows:
+
+user_id	tweet_date	tweet_count	rolling_avg
+111	06/01/2022 00:00:00	2	2.0000000000000000
+111	06/02/2022 00:00:00	1	1.5000000000000000
+111	06/03/2022 00:00:00	3	2.0000000000000000
+111	06/04/2022 00:00:00	4	2.5000000000000000
+111	06/05/2022 00:00:00	5	3.0000000000000000
+The output shows the rolling average tweet count for the cumulative number of days.
+
+Calculating the rolling average tweet count:
+
+06/01/2022: 2 = 2.0
+06/02/2022: 2 + 1 = 3 / 2 days = 1.5
+06/03/2022: 2 + 1 + 3 = 6 / 3 days = 2.0
+06/04/2022: 2 + 1 + 3 + 4 = 10 / 4 days = 2.5
+06/05/2022: 2 + 1 + 3 + 4 + 5 = 15 / 5 days = 3.0
+However, this is not what we need as we want to calculate the rolling average over a 3-day period. To achieve this, we add the expression ROWS BETWEEN 2 PRECEDING AND CURRENT ROW to the window function.
+
+AVG(tweet_count) OVER (
+  PARTITION BY user_id     
+  ORDER BY tweet_date     
+  ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) -- This is the additional expression
+Step 2: Calculate the rolling average tweet count for each user over a 3-day period
+To calculate the rolling average tweet count by 3-day period, we modify the previous query by adding the ROWS BETWEEN 2 PRECEDING AND CURRENT ROW expression to the window function.
+
+SELECT    
+  user_id,    
+  tweet_date,
+  tweet_count,
+  AVG(tweet_count) OVER (
+    PARTITION BY user_id     
+    ORDER BY tweet_date
+    ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS rolling_avg
+FROM tweets;
+Output showing the first 5 rows:
+
+user_id	tweet_date	tweet_count	rolling_avg
+111	06/01/2022 00:00:00	2	2.0000000000000000
+111	06/02/2022 00:00:00	1	1.5000000000000000
+111	06/03/2022 00:00:00	3	2.0000000000000000
+111	06/04/2022 00:00:00	4	2.6666666666666667
+111	06/05/2022 00:00:00	5	4.0000000000000000
+This query outputs the rolling average tweet count by 3-day period, as required by the question.
+
+Calculating the rolling averages using ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+
+06/01/2022: 2 = 2.0
+06/02/2022: 2 + 1 = 3 / 2 days = 1.5
+06/03/2022: 2 + 1 + 3 = 6 / 3 days = 2.0
+06/04/2022: 1 + 3 + 4 = 8 / 3 days = 2.666...
+06/05/2022: 3 + 4 + 5 = 12 / 3 days = 4.0
+Step 3: Round the rolling average tweet count to 2 decimal points
+Finally, we round up the rolling averages to the nearest 2 decimal points by incorporating the ROUND() function into the previous query.
+
+SELECT    
+  user_id,    
+  tweet_date,   
+  ROUND(AVG(tweet_count) OVER (
+    PARTITION BY user_id     
+    ORDER BY tweet_date     
+    ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)
+  ,2) AS rolling_avg_3d
+FROM tweets;
