@@ -1,0 +1,100 @@
+Easy
+
+Facebook
+Assume you're given two tables containing data about Facebook Pages and their respective likes (as in "Like a Facebook Page").
+
+Write a query to return the IDs of the Facebook pages that have zero likes. The output should be sorted in ascending order based on the page IDs.
+
+pages Table:
+Column Name	Type
+page_id	integer
+page_name	varchar
+pages Example Input:
+page_id	page_name
+20001	SQL Solutions
+20045	Brain Exercises
+20701	Tips for Data Analysts
+page_likes Table:
+Column Name	Type
+user_id	integer
+page_id	integer
+liked_date	datetime
+page_likes Example Input:
+user_id	page_id	liked_date
+111	20001	04/08/2022 00:00:00
+121	20045	03/12/2022 00:00:00
+156	20001	07/25/2022 00:00:00
+Example Output:
+page_id
+20701
+The dataset you are querying against may have different input & output - this is just an example!
+
+p.s. If you have literally no idea how to solve this, maybe give our free SQL tutorial a try first?
+.........................................................
+
+
+
+
+Solution
+To find the Facebook pages that do not possess any likes, we can use the EXCEPT operator. This operator allows us to subtract the rows from one result set that exist in another result set.
+
+Step 1: Retrieve all Facebook page IDs
+
+In this step, we select all the page IDs from the pages table which gives us the initial set of Facebook pages to consider.
+
+Run the following query to obtain an overview of the data:
+
+SELECT page_id
+FROM pages;
+Step 2: Retrieve Facebook page IDs with likes
+
+Here, we select the page IDs from the page_likes table, representing the set of Facebook pages that have received likes.
+
+Execute the following query to get an overview of the data:
+
+SELECT page_id
+FROM page_likes;
+Step 3: Find Facebook page IDs without likes
+
+Using the EXCEPT operator, we subtract the page IDs with likes from the initial set of all page IDs. The resulting query will give us the IDs of the Facebook pages that do not possess any likes.
+
+SELECT page_id
+FROM pages
+EXCEPT
+SELECT page_id
+FROM page_likes;
+Additionally, here are alternative methods to solve the problem:
+
+Method #2: Using LEFT OUTER JOIN
+
+In this method, a LEFT OUTER JOIN is performed between the pages and page_likes tables.
+
+The LEFT OUTER JOIN selects all rows from the left table (pages) and the matching rows from the right table (page_likes).
+
+By checking for NULL values in the likes.page_id column, we can identify the Facebook pages that do not possess any likes.
+
+SELECT pages.page_id
+FROM pages
+LEFT OUTER JOIN page_likes AS likes
+  ON pages.page_id = likes.page_id
+WHERE likes.page_id IS NULL;
+Method #3: Using NOT IN` clause
+
+SELECT page_id
+FROM pages
+WHERE page_id NOT IN (
+  SELECT page_id
+  FROM page_likes
+  WHERE page_id IS NOT NULL
+);
+Method #4: Using NOT EXISTS clause
+
+This method utilizes the NOT EXISTS clause to check for the non-existence of matching records in the page_likes table. It efficiently identifies the Facebook pages without any likes.
+
+SELECT page_id
+FROM pages
+WHERE NOT EXISTS (
+  SELECT page_id
+  FROM page_likes AS likes
+  WHERE likes.page_id = pages.page_id
+;)
