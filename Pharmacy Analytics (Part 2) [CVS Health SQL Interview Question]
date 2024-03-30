@@ -1,0 +1,105 @@
+Easy
+
+CVS Health
+CVS Health is analyzing its pharmacy sales data, and how well different products are selling in the market. Each drug is exclusively manufactured by a single manufacturer.
+
+Write a query to identify the manufacturers associated with the drugs that resulted in losses for CVS Health and calculate the total amount of losses incurred.
+
+Output the manufacturer's name, the number of drugs associated with losses, and the total losses in absolute value. Display the results sorted in descending order with the highest losses displayed at the top.
+
+If you like this question, try out Pharmacy Analytics (Part 3)!
+
+pharmacy_sales Table:
+Column Name	Type
+product_id	integer
+units_sold	integer
+total_sales	decimal
+cogs	decimal
+manufacturer	varchar
+drug	varchar
+pharmacy_sales Example Input:
+product_id	units_sold	total_sales	cogs	manufacturer	drug
+156	89514	3130097.00	3427421.73	Biogen	Acyclovir
+25	222331	2753546.00	2974975.36	AbbVie	Lamivudine and Zidovudine
+50	90484	2521023.73	2742445.90	Eli Lilly	Dermasorb TA Complete Kit
+98	110746	813188.82	140422.87	Biogen	Medi-Chord
+Example Output:
+manufacturer	drug_count	total_loss
+Biogen	1	297324.73
+AbbVie	1	221429.36
+Eli Lilly	1	221422.17
+Explanation:
+The first three rows indicate that some drugs resulted in losses. Among these, Biogen had the highest losses, followed by AbbVie and Eli Lilly. However, the Medi-Chord drug manufactured by Biogen reported a profit and was excluded from the result.
+
+The dataset you are querying against may have different input & output - this is just an example!
+.......................................................
+
+
+
+
+Solution
+Step 1: Calculate total profit or loss for each manufacturer
+To determine the total profit or loss for each manufacturer, we can use the formula:
+
+Total Profit/(Total Loss) = Total Sales - Total Cost of Goods Sold
+
+where a positive value indicates profit and a negative value indicates a loss. The query would look like this:
+
+SELECT
+  manufacturer,
+  drug,
+  total_sales - cogs AS net_value
+FROM pharmacy_sales;
+Showing the output for 4 randomly selected drugs:
+
+manufacturer	drug	net_value
+Biogen	Acyclovir	-297324.73
+AbbVie	Lamivudine and Zidovudine	-221429.36
+Eli Lilly	Dermasorb TA Complete Kit	-221422.17
+Biogen	Medi-Chord	672765.95
+This query will provide a result with the net_value column showing the calculated profit or loss for each drug.
+
+Step 2: Filter for drugs making losses
+To filter for drugs that are making losses, we can add a WHERE clause to keep rows where the total_sales - cogs is equal to or less than 0, indicating a loss:
+
+SELECT
+  manufacturer,
+  drug,
+  total_sales - cogs AS net_value
+FROM pharmacy_sales
+WHERE total_sales - cogs <= 0;
+This query will return only the rows where the drug is making a loss.
+
+Step 3: Obtain count of unprofitable drugs and total losses for each manufacturer
+Next, we can use aggregate functions to obtain the count of drugs associated with each manufacturer using COUNT() and the total losses suffered by each manufacturer using SUM():
+
+SELECT
+  manufacturer,
+  COUNT(drug) AS drug_count,
+  SUM(total_sales - cogs) AS total_loss
+FROM pharmacy_sales
+WHERE total_sales - cogs <= 0
+GROUP BY manufacturer;
+Step 4: Convert total loss to absolute value and sort output
+To convert the total losses to absolute value (i.e., remove the negative sign), we can use the ABS() function on the SUM(net_value) and order the results with the highest losses at the top:
+
+SELECT
+  manufacturer,
+  COUNT(drug) AS drug_count,
+  ABS(SUM(total_sales - cogs)) AS total_loss
+FROM pharmacy_sales
+WHERE total_sales - cogs <= 0
+GROUP BY manufacturer
+ORDER BY total_loss DESC;
+Solution #2: Without ABS()
+
+Alternatively, we can achieve the same result without using the ABS() function by switching the cogs and total_sales positions in the SUM() function and filtering for rows where cogs > total_sales in the WHERE clause:
+
+SELECT
+  manufacturer,
+  COUNT(drug) AS drug_count, 
+  SUM(cogs - total_sales) AS total_loss
+FROM pharmacy_sales
+WHERE cogs > total_sales
+GROUP BY manufacturer
+ORDER BY total_loss DESC;
