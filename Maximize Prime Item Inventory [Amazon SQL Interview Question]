@@ -1,0 +1,163 @@
+Hard
+
+Amazon
+Amazon wants to maximize the number of items it can stock in a 500,000 square feet warehouse. It wants to stock as many prime items as possible, and afterwards use the remaining square footage to stock the most number of non-prime items.
+
+Write a query to find the number of prime and non-prime items that can be stored in the 500,000 square feet warehouse. Output the item type with prime_eligible followed by not_prime and the maximum number of items that can be stocked.
+
+Effective April 3rd 2023, we added some new assumptions to the question to provide additional clarity.
+
+Assumptions:
+
+Prime and non-prime items have to be stored in equal amounts, regardless of their size or square footage. This implies that prime items will be stored separately from non-prime items in their respective containers, but within each container, all items must be in the same amount.
+Non-prime items must always be available in stock to meet customer demand, so the non-prime item count should never be zero.
+Item count should be whole numbers (integers).
+inventory table:
+Column Name	Type
+item_id	integer
+item_type	string
+item_category	string
+square_footage	decimal
+inventory Example Input:
+item_id	item_type	item_category	square_footage
+1374	prime_eligible	mini refrigerator	68.00
+4245	not_prime	standing lamp	26.40
+2452	prime_eligible	television	85.00
+3255	not_prime	side table	22.60
+1672	prime_eligible	laptop	8.50
+Example Output:
+item_type	item_count
+prime_eligible	9285
+not_prime	6
+The dataset you are querying against may have different input & output - this is just an example!
+...........................................................
+
+
+
+
+Solution
+Goal: Find the maximum number of prime and non-prime items that can be stocked in a 500,000 sq ft warehouse, with prime items being prioritized.
+
+Step 1: Calculate the total square footage and the number of items for both prime and non-prime items as separate groups
+To start, we use the following query to summarize the relevant information:
+
+SELECT
+  item_type,
+  SUM(square_footage) AS total_sqft,
+  COUNT(*) AS item_count
+FROM inventory
+GROUP BY item_type;
+This query will return the total square footage and the item count for each item type (prime and non-prime).
+
+item_type	total_sqft	item_count
+prime_eligible	555.20	6
+not_prime	128.50	4
+Step 2: Determine the maximum number of prime items that can be stored in the 500,000 sq ft warehouse
+Next, we need to figure out the maximum number of prime items that can be stored in the warehouse by dividing the warehouse's area by the total area of prime items and rounding down to the nearest integer.
+
+WITH summary 
+AS (  
+  SELECT  
+    item_type,  
+    SUM(square_footage) AS total_sqft,  
+    COUNT(*) AS item_count  
+  FROM inventory  
+  GROUP BY item_type
+)
+
+SELECT  
+  item_type,
+  total_sqft
+  FLOOR(500000/total_sqft) AS prime_item_combination_count,
+  (FLOOR(500000/total_sqft) * item_count) AS prime_item_count
+FROM summary  
+WHERE item_type = 'prime_eligible';
+item_type	total_sqft	prime_item_combination_count	prime_item_count
+prime_eligible	555.20	900	5400
+The result shows that the warehouse can stock 900 times of prime items which can be mathematically expressed as:
+
+900 times x 555.20 sq ft = 499,680 sq ft area occupied by prime items
+
+The remaining warehouse space to stock non-prime items is 500,000 sq ft - 499,680 sq ft = 320 sq ft.
+
+Step 3: Calculate the maximum number of non-prime items that can be stored
+Finally, we need to calculate the maximum number of non-prime items that can be stored in the warehouse.
+
+(1) Calculate the maximum number of prime items
+
+We've calculated this in the previous step and the maximum number of prime items is 5,400 prime items.
+
+(2) Calculate the maximum number of non-prime items
+
+Storage area - (total area occupied by prime items) / area occupied by non-prime items * number of non-prime items per area
+
+= FLOOR(500,000 sq ft - (900 x 555.20 prime sq ft)) / 128.50 non-prime sq ft* 4 items = 8 non-prime items
+
+Output the results with prime items followed by non-prime items.
+
+Here is the final query to accomplish this:
+
+WITH summary AS (  
+  SELECT  
+    item_type,  
+    SUM(square_footage) AS total_sqft,  
+    COUNT(*) AS item_count  
+  FROM inventory  
+  GROUP BY item_type
+),
+prime_occupied_area AS (  
+  SELECT  
+    item_type,
+    total_sqft,
+    FLOOR(500000/total_sqft) AS prime_item_combination_count,
+    (FLOOR(500000/total_sqft) * item_count) AS prime_item_count
+  FROM summary  
+  WHERE item_type = 'prime_eligible'
+)
+
+SELECT
+  item_type,
+  CASE 
+    WHEN item_type = 'prime_eligible' 
+      THEN (FLOOR(500000/total_sqft) * item_count)
+    WHEN item_type = 'not_prime' 
+      THEN FLOOR((500000 - 
+        (SELECT FLOOR(500000/total_sqft) * total_sqft FROM prime_occupied_area))  
+        / total_sqft)  
+        * item_count
+  END AS item_count
+FROM summary
+ORDER BY item_type DESC;
+Final results:
+
+item_type	item_count
+prime_eligible	5400
+not_prime	8
+Method #2: Using FILTER and UNION ALL operator
+
+WITH summary AS (
+SELECT 
+  SUM(square_footage) FILTER (WHERE item_type = 'prime_eligible') AS prime_sq_ft,
+  COUNT(item_id) FILTER (WHERE item_type = 'prime_eligible') AS prime_item_count,
+  SUM(square_footage) FILTER (WHERE item_type = 'not_prime') AS not_prime_sq_ft,
+  COUNT(item_id) FILTER (WHERE item_type = 'not_prime') AS not_prime_item_count
+FROM inventory
+),
+prime_occupied_area AS (
+SELECT
+  FLOOR(500000/prime_sq_ft)*prime_sq_ft AS max_prime_area
+FROM summary
+)
+
+SELECT 
+  'prime_eligible' AS item_type,
+  FLOOR(500000/prime_sq_ft)*prime_item_count AS item_count
+FROM summary
+
+UNION ALL
+
+SELECT 
+  'not_prime' AS item_type,
+  FLOOR((500000-(SELECT max_prime_area FROM prime_occupied_area)) 
+    / not_prime_sq_ft) * not_prime_item_count AS item_count
+FROM summary;
