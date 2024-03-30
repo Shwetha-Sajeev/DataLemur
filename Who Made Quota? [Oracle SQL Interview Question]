@@ -1,0 +1,69 @@
+Easy
+
+Oracle
+As a data analyst on the Oracle Sales Operations team, you are given a list of salespeople’s deals, and the annual quota they need to hit.
+
+Write a query that outputs each employee id and whether they hit the quota or not ('yes' or 'no'). Order the results by employee id in ascending order.
+
+Definitions:
+
+deal_size: Deals acquired by a salesperson in the year. Each salesperson may have more than 1 deal.
+quota: Total annual quota for each salesperson.
+deals Table:
+Column Name	Type
+employee_id	integer
+deal_size	integer
+deals Example Input:
+employee_id	deal_size
+101	400000
+101	300000
+201	500000
+301	500000
+sales_quotas Table:
+Column Name	Type
+employee_id	integer
+quota	integer
+sales_quotas Example Input:
+employee_id	quota
+101	500000
+201	400000
+301	600000
+Example Output:
+employee_id	made_quota
+101	yes
+201	yes
+301	no
+Explanation:
+User 101 had $700k in sales, beating their $500k quota. User 201 had $500k in sales, beating their $400k quota. User 301 had $500k in sales, but had a $600k quota, so they didn't hit their goal.
+
+The dataset you are querying against may have different input & output - this is just an example!
+...............................................................
+
+
+
+
+Solution
+These are the summarized steps:
+
+Group the deals dataset to obtain the total deal amount for each employee.
+Join the aggregated table with the sales quotas dataset.
+Compare each employee's quotas and total deal amount and indicate whether they hit ('yes') or didn't hit ('no') their quotas.
+Let's start off by exploring the deals dataset. Note that it includes several deals per employee. Thus, as the first step, we should group the dataset, and obtain the total deal amount for each employee.
+
+SELECT 
+  employee_id, 
+  SUM(deal_size) as deal_size
+FROM deals
+GROUP BY employee_id;
+As the last step, we use CASE conditional statement and comparison operator to compare the total deal size and the quota, and allocate 'yes' or 'no' respectively. Also, do not forget to order results by employee_id!
+
+SELECT 
+  deals.employee_id,
+  CASE WHEN SUM(deals.deal_size) > quotas.quota THEN 'yes' 
+    ELSE 'no' 
+  END AS made_quota
+FROM deals
+INNER JOIN sales_quotas AS quotas
+  ON deals.employee_id = quotas.employee_id
+GROUP BY deals.employee_id, quotas.quota
+ORDER BY deals.employee_id;
