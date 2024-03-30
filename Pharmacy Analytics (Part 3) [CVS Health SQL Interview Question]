@@ -1,0 +1,257 @@
+Easy
+
+CVS Health
+CVS Health wants to gain a clearer understanding of its pharmacy sales and the performance of various products.
+
+Write a query to calculate the total drug sales for each manufacturer. Round the answer to the nearest million and report your results in descending order of total sales. In case of any duplicates, sort them alphabetically by the manufacturer name.
+
+Since this data will be displayed on a dashboard viewed by business stakeholders, please format your results as follows: "$36 million".
+
+If you like this question, try out Pharmacy Analytics (Part 4)!
+
+pharmacy_sales Table:
+Column Name	Type
+product_id	integer
+units_sold	integer
+total_sales	decimal
+cogs	decimal
+manufacturer	varchar
+drug	varchar
+pharmacy_sales Example Input:
+product_id	units_sold	total_sales	cogs	manufacturer	drug
+94	132362	2041758.41	1373721.70	Biogen	UP and UP
+9	37410	293452.54	208876.01	Eli Lilly	Zyprexa
+50	90484	2521023.73	2742445.9	Eli Lilly	Dermasorb
+61	77023	500101.61	419174.97	Biogen	Varicose Relief
+136	144814	1084258.00	1006447.73	Biogen	Burkhart
+Example Output:
+manufacturer	sale
+Biogen	$4 million
+Eli Lilly	$3 million
+Explanation
+The total sales for Biogen is $4 million ($2,041,758.41 + $500,101.61 + $1,084,258.00 = $3,626,118.02) and for Eli Lilly is $3 million ($293,452.54 + $2,521,023.73 = $2,814,476.27).
+
+The dataset you are querying against may have different input & output - this is just an example!
+...................................................
+
+
+
+
+Solution
+Step 1: Calculate total sales by manufacturer
+To determine the total sales for each manufacturer, we use the SUM() aggregate function to calculate the sum of total sales and group the results by the manufacturer using the GROUP BY clause.
+
+SELECT 
+  manufacturer, 
+  SUM(total_sales) as sales 
+FROM pharmacy_sales 
+GROUP BY manufacturer;
+Here's the output of two randomly selected records:
+
+manufacturer	sales
+Eli Lilly	81641381.27
+Biogen	69824472.58
+The output above shows that Eli Lilly sold drugs with a total sales value of $81,641,381.27, while Biogen sold drugs with a total sales value of $69,824,472.58.
+
+Step 2: Round total sales to the nearest million
+Next, we round the sales values to the nearest million. To achieve this, we divide the sales by one million and use the ROUND function. We also format the results in the million-dollar format.
+
+SELECT 
+  manufacturer, 
+  ROUND(SUM(total_sales) / 1000000) AS sales_mil 
+FROM pharmacy_sales 
+GROUP BY manufacturer;
+Output (example):
+
+manufacturer	sales_mil
+Eli Lilly	82
+Biogen	70
+Eli Lilly's sales value of $81,641,381.27 is rounded to 82 million, while Biogen's sales value of \69,824,472.58 is rounded to $70 million.
+
+Step 3: Transform total sales to '$xx million' format
+To format the sales data as "
+�
+�
+�
+�
+�
+�
+�
+�
+�
+"
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+ℎ
+�
+�
+�
+�
+ℎ
+�
+�
+�
+�
+�
+,
+�
+�
+�
+�
+�
+�
+ℎ
+�
+[
+‘
+�
+�
+�
+�
+�
+�
+‘
+]
+(
+ℎ
+�
+�
+�
+�
+:
+/
+/
+�
+�
+�
+�
+�
+�
+�
+�
+�
+.
+�
+�
+�
+/
+�
+�
+�
+−
+�
+�
+�
+�
+�
+�
+�
+�
+/
+�
+�
+�
+−
+�
+�
+�
+�
+�
+�
+−
+�
+�
+�
+�
+)
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+�
+ℎ
+�
+�
+�
+�
+�
+�
+�
+�
+�
+:
+�
+ℎ
+�
+"
+xxmillion"asrequiredforthedashboard,weusethe[‘CONCAT‘](https://datalemur.com/sql−tutorial/sql−string−text)functiontoconcatenatetheelements:the"" symbol, the sales_mil in million, and the " million" string. A space is added in front of "million" to match the desired format.
+
+P.S. It is not necessary to convert sales into VARCHAR data type as the CONCAT() function accepts both VARCHAR and INT data types. Bear in mind that the sales_mil column is now a VARCHAR data type.
+
+SELECT 
+  manufacturer, 
+  CONCAT('$', ROUND(SUM(total_sales) / 1000000), ' million') AS sales_mil
+FROM pharmacy_sales 
+GROUP BY manufacturer;
+Output:
+
+manufacturer	sales_mil
+Eli Lilly	$82 million
+Biogen	$70 million
+The sales values are now formatted as "$xx million" for display on the dashboard.
+
+Step 4: Order the results by total sales in descending order
+To present the results in descending order of total sales, we add the ORDER BY clause and specify SUM(total_sales) in the descending order.
+
+SELECT 
+  manufacturer, 
+  CONCAT( '$', ROUND(SUM(total_sales) / 1000000), ' million') AS sales_mil 
+FROM pharmacy_sales 
+GROUP BY manufacturer 
+ORDER BY SUM(total_sales) DESC, manufacturer;
+Solution #2: Using CTE
+
+Learn all about CTEs in this tutorial!
+
+WITH drug_sales AS (
+  SELECT 
+    manufacturer, 
+    SUM(total_sales) as sales 
+  FROM pharmacy_sales 
+  GROUP BY manufacturer
+) 
+
+SELECT 
+  manufacturer, 
+  ('$' || ROUND(sales / 1000000) || ' million') AS sales_mil 
+FROM drug_sales 
+ORDER BY sales DESC, manufacturer;
