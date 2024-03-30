@@ -1,0 +1,115 @@
+Easy
+
+Facebook
+This is the same question as problem #1 in the SQL Chapter of Ace the Data Science Interview!
+
+Assume you have an events table on Facebook app analytics. Write a query to calculate the click-through rate (CTR) for the app in 2022 and round the results to 2 decimal places.
+
+Definition and note:
+
+Percentage of click-through rate (CTR) = 100.0 * Number of clicks / Number of impressions
+To avoid integer division, multiply the CTR by 100.0, not 100.
+events Table:
+Column Name	Type
+app_id	integer
+event_type	string
+timestamp	datetime
+events Example Input:
+app_id	event_type	timestamp
+123	impression	07/18/2022 11:36:12
+123	impression	07/18/2022 11:37:12
+123	click	07/18/2022 11:37:42
+234	impression	07/18/2022 14:15:12
+234	click	07/18/2022 14:16:12
+Example Output:
+app_id	ctr
+123	50.00
+234	100.00
+Explanation
+Let's consider an example of App 123. This app has a click-through rate (CTR) of 50.00% because out of the 2 impressions it received, it got 1 click.
+
+To calculate the CTR, we divide the number of clicks by the number of impressions, and then multiply the result by 100.0 to express it as a percentage. In this case, 1 divided by 2 equals 0.5, and when multiplied by 100.0, it becomes 50.00%. So, the CTR of App 123 is 50.00%.
+
+The dataset you are querying against may have different input & output - this is just an example!
+..........................................
+
+
+
+
+Solution
+Step 1: Filter for analytics events from year 2022
+First, we filter for analytics events from the year 2022 using the WHERE clause with appropriate comparison operators:
+
+timestamp >= '2022-01-01': Events with timestamps on or after January 1, 2022, are selected.
+timestamp < '2023-01-01': Events before January 1, 2023, are selected, but events on January 1, 2023, are excluded from the result.
+SELECT *
+FROM events
+WHERE timestamp >= '2022-01-01' 
+  AND timestamp < '2023-01-01';
+Step 2: Calculate the number of clicks and number of impressions
+Next, find the number of clicks and impressions using the CASE statement to assign a value of 1 for 'click' events and 0 for other events:
+
+SELECT
+  app_id,
+  CASE WHEN event_type = 'click' THEN 1 ELSE 0 END AS clicks,
+  CASE WHEN event_type = 'impression' THEN 1 ELSE 0 END AS impressions
+FROM events
+WHERE timestamp >= '2022-01-01' 
+  AND timestamp < '2023-01-01';
+Here's the first 5 rows of output:
+
+app_id	clicks	impressions
+123	0	1
+123	0	1
+123	1	0
+234	0	1
+234	1	0
+Then, we add up the clicks and impressions by wrapping the CASE statements with a SUM() aggregate function and group the results by app_id.
+
+SELECT
+  app_id,
+  SUM(CASE WHEN event_type = 'click' THEN 1 ELSE 0 END) AS clicks, 
+  SUM(CASE WHEN event_type = 'impression' THEN 1 ELSE 0 END) AS impressions
+FROM events
+WHERE timestamp >= '2022-01-01' 
+  AND timestamp < '2023-01-01'
+GROUP BY app_id;
+app_id	clicks	impressions
+123	2	3
+234	1	3
+Step 4: Calculate the percentage of the click-through rate and round to 2 decimal places
+Finally, calculate the percentage of click-through rate (CTR) by dividing the number of clicks by the number of impressions and multiplying by 100.0, rounded to 2 decimal places using the ROUND() function.
+
+Percentage of click-through rate = 100.0 * Number of clicks / Number of impressions
+
+SELECT
+  app_id,
+  ROUND(100.0 *
+    SUM(CASE WHEN event_type = 'click' THEN 1 ELSE 0 END) /
+    SUM(CASE WHEN event_type = 'impression' THEN 1 ELSE 0 END), 2)  AS ctr_rate
+FROM events
+WHERE timestamp >= '2022-01-01' 
+  AND timestamp < '2023-01-01'
+GROUP BY app_id;
+Solution #2: Using COUNT(CASE ...)
+
+SELECT
+  app_id,
+  ROUND(100.0 *
+    COUNT(CASE WHEN event_type = 'click' THEN 1 ELSE NULL END) /
+    COUNT(CASE WHEN event_type = 'impression' THEN 1 ELSE NULL END), 2)  AS ctr_rate
+FROM events
+WHERE timestamp >= '2022-01-01' 
+  AND timestamp < '2023-01-01'
+GROUP BY app_id;
+Solution #3: Using SUM() FILTER ()
+
+SELECT
+  app_id,
+  ROUND(100.0 *
+    SUM(1) FILTER (WHERE event_type = 'click') /
+    SUM(1) FILTER (WHERE event_type = 'impression'), 2) AS ctr_app
+FROM events
+WHERE timestamp >= '2022-01-01' 
+  AND timestamp < '2023-01-01'
+GROUP BY app_id;
