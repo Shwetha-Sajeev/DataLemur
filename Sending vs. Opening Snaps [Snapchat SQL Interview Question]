@@ -1,0 +1,159 @@
+Medium
+
+Snapchat
+This is the same question as problem #25 in the SQL Chapter of Ace the Data Science Interview!
+
+Assume you're given tables with information on Snapchat users, including their ages and time spent sending and opening snaps.
+
+Write a query to obtain a breakdown of the time spent sending vs. opening snaps as a percentage of total time spent on these activities grouped by age group. Round the percentage to 2 decimal places in the output.
+
+Notes:
+
+Calculate the following percentages:
+time spent sending / (Time spent sending + Time spent opening)
+Time spent opening / (Time spent sending + Time spent opening)
+To avoid integer division in percentages, multiply by 100.0 and not 100.
+Effective April 15th, 2023, the solution has been updated and optimised.
+
+activities Table
+Column Name	Type
+activity_id	integer
+user_id	integer
+activity_type	string ('send', 'open', 'chat')
+time_spent	float
+activity_date	datetime
+activities Example Input
+activity_id	user_id	activity_type	time_spent	activity_date
+7274	123	open	4.50	06/22/2022 12:00:00
+2425	123	send	3.50	06/22/2022 12:00:00
+1413	456	send	5.67	06/23/2022 12:00:00
+1414	789	chat	11.00	06/25/2022 12:00:00
+2536	456	open	3.00	06/25/2022 12:00:00
+age_breakdown Table
+Column Name	Type
+user_id	integer
+age_bucket	string ('21-25', '26-30', '31-25')
+age_breakdown Example Input
+user_id	age_bucket
+123	31-35
+456	26-30
+789	21-25
+Example Output
+age_bucket	send_perc	open_perc
+26-30	65.40	34.60
+31-35	43.75	56.25
+Explanation
+Using the age bucket 26-30 as example, the time spent sending snaps was 5.67 and the time spent opening snaps was 3.
+
+To calculate the percentage of time spent sending snaps, we divide the time spent sending snaps by the total time spent on sending and opening snaps, which is 5.67 + 3 = 8.67.
+
+So, the percentage of time spent sending snaps is 5.67 / (5.67 + 3) = 65.4%, and the percentage of time spent opening snaps is 3 / (5.67 + 3) = 34.6%.
+
+The dataset you are querying against may have different input & output - this is just an example!
+..................................................
+
+
+
+
+Solution
+Step 1: Join tables and filter for 'send' and 'open' snaps
+We start by joining the age_breakdown table with the activities table using the user_id field as common identifier. We then filter the results by 'send' and 'open' activity_type because we are interested in focusing on sending and opening snaps. Finally, we group the results by age_bucket to aggregate the data.
+
+SELECT *
+FROM activities
+INNER JOIN age_breakdown AS age 
+  ON activities.user_id = age.user_id 
+WHERE activities.activity_type IN ('send', 'open') 
+GROUP BY age.age_bucket;
+Step 2: Obtain total time spent on sending and opening snaps
+Next, we calculate the total time spent on sending and opening snaps using aggregate function SUM() along with FILTER clause for each activity type ('send' and 'open').
+
+SELECT 
+  age.age_bucket, 
+    SUM(activities.time_spent) FILTER (WHERE activities.activity_type = 'send') AS send_perc, 
+    SUM(activities.time_spent) FILTER (WHERE activities.activity_type = 'open') AS open_perc
+FROM activities
+INNER JOIN age_breakdown AS age 
+  ON activities.user_id = age.user_id 
+WHERE activities.activity_type IN ('send', 'open') 
+GROUP BY age.age_bucket;
+Here's how the output looks like:
+
+age_bucket	send_perc	open_perc
+21-25	6.24	5.25
+26-30	13.91	3.00
+31-35	3.50	5.75
+Step 3: Calculate the percentages
+Next, we convert the query into a Common Table Expression (CTE) called snap_statistics. Within the CTE, we calculate the percentages of time spent on sending and opening snaps using the formula:
+
+Percentage of time spent on sending/opening snaps = Time spent on sending/opening snaps / Total time spent on sending and opening snaps
+
+This formula will help us determine the proportion of time spent on sending or opening snaps relative to the total time spent on both activities.
+
+SELECT 
+  age.age_bucket, 
+    SUM(activities.time_spent) FILTER (WHERE activities.activity_type = 'send')/
+      SUM(activities.time_spent) AS send_perc, 
+    SUM(activities.time_spent) FILTER (WHERE activities.activity_type = 'open')/
+      SUM(activities.time_spent) AS open_perc
+FROM activities
+INNER JOIN age_breakdown AS age 
+  ON activities.user_id = age.user_id 
+WHERE activities.activity_type IN ('send', 'open') 
+GROUP BY age.age_bucket;
+age_bucket	send_perc	open_perc
+21-25	0.54308093994778067885	0.45691906005221932115
+26-30	0.82259018332347723241	0.17740981667652276759
+31-35	0.37837837837837837838	0.62162162162162162162
+Step 4: Round the percentages
+Finally, we round the percentages to 2 decimal places. Ensure that you're wrapping the expression correctly.
+
+Lastly, we ensure that the calculated percentages are rounded to 2 decimal places using the ROUND() function with the appropriate precision specified.
+
+SELECT 
+  age.age_bucket, 
+  ROUND(100.0 * 
+    SUM(activities.time_spent) FILTER (WHERE activities.activity_type = 'send')/
+      SUM(activities.time_spent),2) AS send_perc, 
+  ROUND(100.0 * 
+    SUM(activities.time_spent) FILTER (WHERE activities.activity_type = 'open')/
+      SUM(activities.time_spent),2) AS open_perc
+FROM activities
+INNER JOIN age_breakdown AS age 
+  ON activities.user_id = age.user_id 
+WHERE activities.activity_type IN ('send', 'open') 
+GROUP BY age.age_bucket;
+Here's the results:
+
+age_bucket	send_perc	open_perc
+21-25	54.31	45.69
+26-30	82.26	17.74
+31-35	37.84	62.16
+Here's a summary of the results:
+
+Age group 21-25: Sending snaps is slightly more prevalent (54.31%) than opening snaps (45.69%).
+Age group 26-30: Sending snaps is significantly more dominant (82.26%) than opening snaps (17.74%).
+Age group 31-35: Opening snaps is more prevalent (62.16%) than sending snaps (37.84%).
+A useful tip to keep in mind is that when dividing two integers using the division / operator in PostgreSQL, only the integer part of the result is considered, disregarding any remainder (e.g., .123, .352). To avoid integer division and ensure that the resulting values are converted into decimal values, it is important to multiply the values by 100.0 before performing the division. This will ensure that the calculated percentages are accurate and expressed as decimal values.
+
+Solution #2: Using CTE and CASE Statement
+
+WITH snaps_statistics AS (
+  SELECT 
+    age.age_bucket, 
+    SUM(CASE WHEN activities.activity_type = 'send' 
+      THEN activities.time_spent ELSE 0 END) AS send_timespent, 
+    SUM(CASE WHEN activities.activity_type = 'open' 
+      THEN activities.time_spent ELSE 0 END) AS open_timespent, 
+    SUM(activities.time_spent) AS total_timespent 
+  FROM activities
+ INNER JOIN age_breakdown AS age 
+    ON activities.user_id = age.user_id 
+  WHERE activities.activity_type IN ('send', 'open') 
+  GROUP BY age.age_bucket) 
+
+SELECT 
+  age_bucket, 
+  ROUND(100.0 * send_timespent / total_timespent, 2) AS send_perc, 
+  ROUND(100.0 * open_timespent / total_timespent, 2) AS open_perc 
+FROM snaps_statistics;
