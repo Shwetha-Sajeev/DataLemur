@@ -1,0 +1,104 @@
+Easy
+
+Robinhood
+This is the same question as problem #2 in the SQL Chapter of Ace the Data Science Interview!
+
+Assume you're given the tables containing completed trade orders and user details in a Robinhood trading system.
+
+Write a query to retrieve the top three cities that have the highest number of completed trade orders listed in descending order. Output the city name and the corresponding number of completed trade orders.
+
+trades Table:
+Column Name	Type
+order_id	integer
+user_id	integer
+price	decimal
+quantity	integer
+status	string('Completed' ,'Cancelled')
+timestamp	datetime
+trades Example Input:
+order_id	user_id	price	quantity	status	timestamp
+100101	111	9.80	10	Cancelled	08/17/2022 12:00:00
+100102	111	10.00	10	Completed	08/17/2022 12:00:00
+100259	148	5.10	35	Completed	08/25/2022 12:00:00
+100264	148	4.80	40	Completed	08/26/2022 12:00:00
+100305	300	10.00	15	Completed	09/05/2022 12:00:00
+100400	178	9.90	15	Completed	09/09/2022 12:00:00
+100565	265	25.60	5	Completed	12/19/2022 12:00:00
+users Table:
+Column Name	Type
+user_id	integer
+city	string
+email	string
+signup_date	datetime
+users Example Input:
+user_id	city	email	signup_date
+111	San Francisco	rrok10@gmail.com	08/03/2021 12:00:00
+148	Boston	sailor9820@gmail.com	08/20/2021 12:00:00
+178	San Francisco	harrypotterfan182@gmail.com	01/05/2022 12:00:00
+265	Denver	shadower_@hotmail.com	02/26/2022 12:00:00
+300	San Francisco	houstoncowboy1122@hotmail.com	06/30/2022 12:00:00
+Example Output:
+city	total_orders
+San Francisco	3
+Boston	2
+Denver	1
+Explanation
+In the given dataset, San Francisco has the highest number of completed trade orders with 3 orders. Boston holds the second position with 2 orders, and Denver ranks third with 1 order.
+
+The dataset you are querying against may have different input & output - this is just an example!
+.............................................
+
+
+
+Solution
+We begin by joining the trades and users tables based on the related column user_id. This is because the 'Completed' order status is stored in the trades table, while the cities are stored in the users table.
+
+In the SELECT statement, we pull the city field from the users table and the order_id field from the trades table.
+
+SELECT users.city, trades.order_id
+FROM trades
+INNER JOIN users
+  ON trades.user_id = users.user_id;
+Output (showing the first 5 rows only):
+
+city	order_id
+San Francisco	100777
+San Francisco	100102
+San Francisco	100101
+Boston	100259
+Boston	100264
+Next, we filter the 'Completed' orders and retrieve the number of orders for each city using the COUNT() aggregate function. We group the results by the city column using the GROUP BY statement.
+
+SELECT 
+  users.city,
+  COUNT(trades.order_id) AS total_orders
+FROM trades 
+INNER JOIN users 
+  ON trades.user_id = users.user_id
+WHERE trades.status = 'Completed'
+GROUP BY users.city;
+The GROUP BY statement is commonly employed in conjunction with aggregate functions such as COUNT, MAX, MIN, SUM, and AVG to group the results based on non-aggregate columns.
+
+Did you notice that our output is grouped by the city column?
+
+city	total_orders
+Boston	1
+New York	2
+San Francisco	4
+Finally, to arrange the output in descending order based on the highest number of completed orders, we utilize the ORDER BY clause and limit the results to the top 3 orders using the LIMIT clause.
+
+SELECT 
+  users.city, 
+  COUNT(trades.order_id) AS total_orders 
+FROM trades 
+INNER JOIN users 
+  ON trades.user_id = users.user_id 
+WHERE trades.status = 'Completed' 
+GROUP BY users.city 
+ORDER BY total_orders DESC
+LIMIT 3;
+city	total_orders
+San Francisco	4
+Boston	3
+Denver	2
+Based on the results, San Francisco has the highest number of completed orders with 4 orders. Boston has the second-highest number of completed orders with 3 orders and Denver has the third-highest number of completed orders with 2 orders.
