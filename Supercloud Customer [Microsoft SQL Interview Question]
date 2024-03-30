@@ -1,0 +1,99 @@
+Medium
+
+Microsoft
+A Microsoft Azure Supercloud customer is defined as a company that purchases at least one product from each product category.
+
+Write a query that effectively identifies the company ID of such Supercloud customers.
+
+As of 5 Dec 2022, data in the customer_contracts and products tables were updated.
+
+customer_contracts Table:
+Column Name	Type
+customer_id	integer
+product_id	integer
+amount	integer
+customer_contracts Example Input:
+customer_id	product_id	amount
+1	1	1000
+1	3	2000
+1	5	1500
+2	2	3000
+2	6	2000
+products Table:
+Column Name	Type
+product_id	integer
+product_category	string
+product_name	string
+products Example Input:
+product_id	product_category	product_name
+1	Analytics	Azure Databricks
+2	Analytics	Azure Stream Analytics
+4	Containers	Azure Kubernetes Service
+5	Containers	Azure Service Fabric
+6	Compute	Virtual Machines
+7	Compute	Azure Functions
+Example Output:
+customer_id
+1
+Explanation:
+Customer 1 bought from Analytics, Containers, and Compute categories of Azure, and thus is a Supercloud customer. Customer 2 isn't a Supercloud customer, since they don't buy any container services from Azure.
+
+The dataset you are querying against may have different input & output - this is just an example!
+..........................................
+
+
+
+
+Solution
+As usual, take a step back and identify the key points of solving the task. This is how we see it:
+
+In addition to the contracts data, we also need the product category information, thus we need to join the tables.
+Identify the customers with purchases from all of the product categories (i.e. Supercloud customers).
+Output the Supercloud customer IDs.
+Step 1
+Join the two tables with either LEFT or INNER JOIN.
+
+SELECT 
+  customers.customer_id, 
+  products.product_category
+FROM customer_contracts AS customers
+LEFT JOIN products 
+  ON customers.product_id = products.product_id;
+Step 2
+Now, let's count all of the distinct product categories that a customer has purchased a product from.
+
+SELECT 
+  customers.customer_id, 
+  COUNT(DISTINCT products.product_category) AS unique_count
+FROM customer_contracts AS customers
+LEFT JOIN products 
+  ON customers.product_id = products.product_id
+GROUP BY customers.customer_id;
+customer_id	unique_count
+1	3
+7	3
+Step 3
+We are almost there, hang on!
+
+Let's wrap the previous step into a CTE, and select only the users who have products from all of the categories.
+
+One way of doing this would be simply filtering for unique_count of 3 (as there are 3 product categories). However, let's be even smarter and make it dynamic by using a subquery referencing the products table instead.
+
+I believe this is a pretty nice solution, don't you?
+
+WITH supercloud AS (
+SELECT 
+  customers.customer_id, 
+  COUNT(DISTINCT products.product_category) as unique_count
+FROM customer_contracts AS customers
+LEFT JOIN products 
+  ON customers.product_id = products.product_id
+GROUP BY customers.customer_id
+)
+
+SELECT customer_id
+FROM supercloud
+WHERE unique_count = (
+  SELECT COUNT(DISTINCT product_category) 
+  FROM products)
+ORDER BY customer_id;
