@@ -1,0 +1,381 @@
+Hard
+
+McKinsey
+You’re a consultant for a major pizza chain that will be running a promotion where all 3-topping pizzas will be sold for a fixed price, and are trying to understand the costs involved.
+
+Given a list of pizza toppings, consider all the possible 3-topping pizzas, and print out the total cost of those 3 toppings. Sort the results with the highest total cost on the top followed by pizza toppings in ascending order.
+
+Break ties by listing the ingredients in alphabetical order, starting from the first ingredient, followed by the second and third.
+
+P.S. Be careful with the spacing (or lack of) between each ingredient. Refer to our Example Output.
+
+Notes:
+
+Do not display pizzas where a topping is repeated. For example, ‘Pepperoni,Pepperoni,Onion Pizza’.
+Ingredients must be listed in alphabetical order. For example, 'Chicken,Onions,Sausage'. 'Onion,Sausage,Chicken' is not acceptable.
+pizza_toppings Table:
+Column Name	Type
+topping_name	varchar(255)
+ingredient_cost	decimal(10,2)
+pizza_toppings Example Input:
+topping_name	ingredient_cost
+Pepperoni	0.50
+Sausage	0.70
+Chicken	0.55
+Extra Cheese	0.40
+Example Output:
+pizza	total_cost
+Chicken,Pepperoni,Sausage	1.75
+Chicken,Extra Cheese,Sausage	1.65
+Extra Cheese,Pepperoni,Sausage	1.60
+Chicken,Extra Cheese,Pepperoni	1.45
+Explanation
+There are four different combinations of the three toppings. Cost of the pizza with toppings Chicken, Pepperoni and Sausage is $0.55 + $0.50 + $0.70 = $1.75.
+
+Additionally, they are arranged alphabetically; in the dictionary, the chicken comes before pepperoni and pepperoni comes before sausage.
+
+The dataset you are querying against may have different input & output - this is just an example!
+................................................
+
+
+
+
+Solution
+We have developed 4 solutions to solve this question:
+
+Using INNER JOIN
+Using CROSS JOIN
+Using RECURSIVE CTE
+USING Array function
+Solution #1: Using INNER JOIN
+Step 1: Join the tables thrice horizontally
+
+First, we create a table where the ingredients are displayed in horizontal style 3 times. That will make the concatenation easier.
+
+SELECT *
+FROM pizza_toppings AS p1
+INNER JOIN pizza_toppings AS p2
+  ON p1.topping_name < p2.topping_name 
+INNER JOIN pizza_toppings AS p3
+  ON p2.topping_name < p3.topping_name;
+Important tip: Instead of matching the tables on columns using the equal sign =, we use the less than sign < to ensure that:
+
+There is no duplication of the ingredients across each row.
+The ingredients are arranged in an alphabetical manner from left to right.
+Showing the output of the first 3 rows:
+
+topping_name	ingredient_cost	topping_name	ingredient_cost	topping_name	ingredient_cost
+Pepperoni	0.50	Sausage	0.70	Spinach	0.30
+Pepperoni	0.50	Pineapple	0.25	Sausage	0.70
+Pepperoni	0.50	Pineapple	0.25	Spinach	0.30
+Step 2: Combine pizza toppings and add the ingredients
+
+Next, we will design the table based on the required output, which is a 3-topping combination and total ingredient cost.
+
+To combine the 3 toppings into a single string, we can either use the CONCAT() function or pipe ||.
+
+CONCAT(expression1, expression2, expression3, ...)
+expression1 || expression2 || expression3
+We'll use the CONCAT() function for this question. As for the total ingredient costs, just add them up using the plus sign + as you would use a calculator.
+
+SELECT 
+  CONCAT(p1.topping_name, ',', p2.topping_name, ',', p3.topping_name) AS pizza,
+  p1.ingredient_cost + p2.ingredient_cost + p3.ingredient_cost AS total_cost
+FROM pizza_toppings AS p1
+INNER JOIN pizza_toppings AS p2
+  ON p1.topping_name < p2.topping_name 
+INNER JOIN pizza_toppings AS p3
+  ON p2.topping_name < p3.topping_name;
+pizza	total_cost
+Pepperoni,Sausage,Spinach	1.50
+Pepperoni,Pineapple,Sausage	1.45
+Pepperoni,Pineapple,Spinach	1.05
+Step 3: Order the output accordingly
+
+Finally, order the output by the highest cost at the top and to break ties, sort the pizza ingredients in ascending order (it also means sort in alphabetical order.
+
+SELECT 
+  CONCAT(p1.topping_name, ',', p2.topping_name, ',', p3.topping_name) AS pizza,
+  p1.ingredient_cost + p2.ingredient_cost + p3.ingredient_cost AS total_cost
+FROM pizza_toppings AS p1
+INNER JOIN pizza_toppings AS p2
+  ON p1.topping_name < p2.topping_name 
+INNER JOIN pizza_toppings AS p3
+  ON p2.topping_name < p3.topping_name 
+ORDER BY total_cost DESC, pizza;
+Solution #2: Using CROSS JOIN
+This solution by @Prathamesh Barane is so ingenious that we could not help but use it as our official solution.
+
+Let's split the problem into 3 slices.
+
+Get every possible combination of 3-topping pizzas
+Discard rows with duplicate toppings and arrange them according to alphabetical order
+Order output by lowest to highest cost
+Step 1: 3-Topping Combinations
+
+Using a neat trick with CROSS JOIN, we're joining the pizza_toppings table horizontally 3 times to obtain an output with 3 columns of the topping_name.
+
+SELECT *
+FROM pizza_toppings AS p1
+CROSS JOIN
+  pizza_toppings AS p2,
+  pizza_toppings AS p3;
+Output of randomly selected 5 rows:
+
+topping_name	ingredient_cost	topping_name	ingredient_cost	topping_name	ingredient_cost
+Pepperoni	0.50	Pepperoni	0.50	Pepperoni	0.50
+Pepperoni	0.50	Pepperoni	0.50	Sausage	0.70
+Pepperoni	0.50	Pepperoni	0.50	Chicken	0.55
+Pepperoni	0.50	Pepperoni	0.50	Extra Cheese	0.40
+Pepperoni	0.50	Pepperoni	0.50	Mushrooms	0.25
+Step 2: Discard duplicates and arrange them alphabetically
+
+Our idea is to concatenate the topping names across a single row, however, in the above output, we have rows where the topping names are duplicates of each other (i.e. [Pepperoni, Pepperoni, Pepperoni], [Pepperoni, Pepperoni, Sausage]).
+
+To ensure that the topping names across a row are different, we use comparison operators in the WHERE clause.
+
+SELECT *
+FROM pizza_toppings AS p1
+CROSS JOIN
+  pizza_toppings AS p2,
+  pizza_toppings AS p3
+WHERE p1.topping_name < p2.topping_name
+  AND p2.topping_name < p3.topping_name;
+Using < for string values is a handy trick to prevent duplication. Not only that, remember the question's requirement of "break ties by listing the ingredients in alphabetical order"?
+
+Well, by writing p1.topping_name < p2.topping_name, it ensures that the second topping's name (p2.topping_name) comes after first topping's name (p1.topping_name). Isn't this cool?
+
+Step 3: Return desired output
+
+To retrieve the combination of 3-topping values in a single cell, we can use CONCAT function and then add up all the ingredient's cost.
+
+SELECT 
+  CONCAT(p1.topping_name, ',', p2.topping_name, ',', p3.topping_name) AS pizza,
+  p1.ingredient_cost + p2.ingredient_cost + p3.ingredient_cost AS total_cost
+FROM pizza_toppings AS p1
+CROSS JOIN
+  pizza_toppings AS p2,
+  pizza_toppings AS p3
+WHERE p1.topping_name < p2.topping_name
+  AND p2.topping_name < p3.topping_name
+ORDER BY total_cost DESC, pizza;
+Solution #3: Using RECURSIVE CTE
+Using the recursive Common Table Expression (also known as recursive CTE), we will find every possible combination of 3-toppings pizzas.
+
+The term recursive CTE refers to a subquery that references itself. There are essentially 3 parts to it:
+
+Non-recursive query (AKA the base query or anchor),
+Recursive query, and
+Termination condition
+Note that strictly speaking, this process is iteration not recursion, but RECURSIVE is the terminology chosen by the SQL standards committee; see PostgreSQL Documentation.
+
+Here is how it is structured in PostgreSQL:
+
+WITH RECURSIVE [cte_name] AS (
+-- Write the non-recursive query
+
+UNION ALL
+
+-- Write the recursive query
+
+WHERE -- Write a termination condition(s) to stop the recursive loop
+);
+For our problem, let's start by enclosing the non-recursive query in the recursive CTE.
+
+WITH RECURSIVE all_toppings AS (
+-- Let's start with the 1st element: Non-recursive query
+SELECT
+  topping_name,
+  ingredient_cost,
+  1 AS topping_numbers
+FROM pizza_toppings
+)
+
+-- Querying the non-recursive query
+SELECT
+  topping_name,
+  ingredient_cost,
+  topping_numbers
+FROM all_toppings;
+Displaying randomly selected 4 records in the output:
+
+topping_name	ingredient_cost	topping_numbers
+Pepperoni	0.50	1
+Sausage	0.70	1
+Chicken	0.55	1
+Extra Cheese	0.40	1
+A newly created column topping_numbers is introduced which serves as a numerical representation of the number of toppings each pizza has. Since each of these toppings in the output is a separate item, the topping number would equal to 1. As more toppings are placed onto the pizza, this topping_numbers will increase incrementally.
+
+We will use this non-recursive query (or the anchor) and iterate through to create different combinations of toppings using a recursive CTE.
+
+Let's incorporate the recursive query inside this CTE – this is the part that makes it recursive.
+
+WITH RECURSIVE all_toppings AS (
+-- 1st element: Non-recursive query
+SELECT
+  topping_name::VARCHAR,
+  ingredient_cost::DECIMAL AS total_cost,
+  1 AS topping_numbers
+FROM pizza_toppings
+
+-- 2nd element: UNION ALL
+UNION ALL 
+
+-- 3rd element: Recursive query
+SELECT
+  CONCAT(addon.topping_name, ',', anchor.topping_name) AS topping_name,
+  addon.ingredient_cost + anchor.total_cost AS total_cost,
+  topping_numbers + 1
+FROM 
+  pizza_toppings AS addon, 
+  all_toppings AS anchor
+WHERE anchor.topping_name < addon.topping_name
+)
+
+-- Querying the output
+SELECT * 
+FROM all_toppings;
+Note that a recursive CTE must have all 3 of the elements in place for it to work.
+
+The first requirement of UNION ALL is:
+
+Each SELECT operation within the UNION ALL must produce result sets with an identical number of fields and data types.
+Due to syntax limitations in PostgreSQL, we have to explicitly cast the columns topping_name and ingredient_cost AS VARCHAR and DECIMAL datatypes in the non-recursive query, respectively.
+PostgreSQL considers (before casting) VARCHAR(255) and (after casting) VARCHAR to be two different entities.
+The topping_name field in the non-recursive query is of the VARCHAR(255) datatype as defined in the table.
+After casting, the topping_name in the recursive query becomes a VARCHAR data type.
+Similarly, we castingredient_cost to DECIMAL as well.
+Note the termination condition in the recursive query: WHERE anchor.topping_name < addon.topping_name. It compares the topping names between the non-recursive and recursive query and prevents the same topping names from showing up multiple times in the 3-topping combination. This recursive query will continue to run until the WHERE clause condition is met.
+
+Let's interpret the SELECT clause of the recursive query:
+
+The CONCAT function is used to combine two or more toppings.
+The cost of the new topping will be added to the expenses of the prior toppings.
+When a topping is put on a pizza, the topping counter (topping_numbers) will be incremented.
+The recursive CTE will continue to run as more toppings are introduced until all possible combinations have been found.
+
+Each new result is added to the preceding result set using the UNION ALL operator.
+
+Showing 5 records for toppings Pepperoni, Extra Cheese, Sausage and Chicken.
+
+topping_name	total_cost	topping_numbers
+Pepperoni	0.50	1
+Sausage,Pepperoni	1.25	2
+Extra Cheese,Chicken	0.95	2
+Pepperoni,Extra Cheese,Chicken	1.45	3
+Sausage,Extra Cheese,Chicken	1.65	3
+We can filter for pizzas with 3 toppings, or WHERE topping_numbers = 3:
+
+WITH RECURSIVE all_toppings AS (
+-- Insert the previous query here
+)
+
+SELECT * 
+FROM all_toppings
+WHERE topping_numbers = 3;
+Output:
+
+topping_name	total_cost	topping_numbers
+Sausage,Pepperoni,Chicken	1.75	3
+Pepperoni,Extra Cheese,Chicken	1.45	3
+Sausage,Extra Cheese,Chicken	1.65	3
+Sausage,Pepperoni,Extra Cheese	1.60	3
+Step 2: Arrange toppings alphabetically
+
+We'll use the following steps to arrange each set of pizza toppings alphabetically:
+
+Divide the toppings up into multiple rows.
+Sort them alphabetically and combine the toppings from the same group.
+We will split the toppings using the function REGEXP_SPLIT_TO_TABLE. It splits the values in form of rows based on the specified delimiter. Let's call this column single_topping.
+
+WITH RECURSIVE all_toppings AS (
+-- Insert the previous query here
+)
+
+SELECT
+  topping_name, 
+  total_cost, 
+  single_topping
+FROM 
+  all_toppings, 
+  REGEXP_SPLIT_TO_TABLE(topping_name, ',') AS single_topping
+WHERE topping_numbers = 3;
+Showing how toppings are split for a pizza with Sausage, Pepperoni, Chicken toppings.
+
+topping_name	total_cost	single_topping
+Sausage,Pepperoni,Chicken	1.75	Pepperoni
+Sausage,Pepperoni,Chicken	1.75	Sausage
+Sausage,Pepperoni,Chicken	1.75	Chicken
+The values in the single_topping column will then be sorted and combined to restore their previous groupings.
+
+One function, STRING_AGG, can do both of these things! STRING_AGG joins sets of strings into a single string. The inner ORDER BY clause then sets the order of the concatenated results.
+
+STRING_AGG (single_topping, ',' , ORDER BY single_topping )
+The output is then arranged in descending order of total cost, followed by the names of the toppings.
+
+We've reached the end of this long road, and our final query is ready :)
+
+WITH RECURSIVE all_toppings AS (
+  SELECT
+  topping_name::VARCHAR,
+  ingredient_cost::DECIMAL AS total_cost,
+  1 AS topping_numbers
+FROM pizza_toppings
+
+UNION ALL
+
+SELECT
+  CONCAT(addon.topping_name, ',', anchor.topping_name) AS topping_name,
+  addon.ingredient_cost + anchor.total_cost AS total_cost,
+  topping_numbers + 1
+FROM 
+  pizza_toppings AS addon, 
+  all_toppings AS anchor
+WHERE anchor.topping_name < addon.topping_name
+)
+
+SELECT
+  STRING_AGG (single_topping, ',' ORDER BY single_topping) AS pizza,
+  total_cost
+FROM 
+  all_toppings, 
+  REGEXP_SPLIT_TO_TABLE(topping_name, ',') AS single_topping
+WHERE topping_numbers = 3
+GROUP BY topping_name, total_cost
+ORDER BY total_cost DESC, pizza;
+Solution #4: Using Array Function
+Array functions can also be used to sort toppings.
+
+WITH RECURSIVE all_toppings AS (
+SELECT
+  topping_name::VARCHAR,
+  ingredient_cost::DECIMAL AS total_cost,
+  1 AS topping_numbers
+FROM pizza_toppings
+
+UNION ALL
+
+SELECT
+  CONCAT(addon.topping_name, ',', anchor.topping_name) AS topping_name,
+  addon.ingredient_cost + anchor.total_cost AS total_cost,
+  topping_numbers + 1
+FROM 
+  pizza_toppings AS addon,
+  all_toppings AS anchor
+WHERE anchor.topping_name < addon.topping_name
+), 
+arrange AS (
+SELECT
+  topping_name,
+  UNNEST(STRING_TO_ARRAY(topping_name, ',')) AS single_topping,
+  total_cost
+FROM all_toppings
+WHERE topping_numbers = 3
+)
+
+SELECT
+  STRING_AGG(single_topping, ',' ORDER BY single_topping) AS pizza,
+  total_cost
+FROM arrange
+GROUP BY topping_name, total_cost
+ORDER BY total_cost DESC, pizza;
