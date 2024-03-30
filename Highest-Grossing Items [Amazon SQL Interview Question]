@@ -1,0 +1,133 @@
+Medium
+
+Amazon
+This is the same question as problem #12 in the SQL Chapter of Ace the Data Science Interview!
+
+Assume you're given a table containing data on Amazon customers and their spending on products in different category, write a query to identify the top two highest-grossing products within each category in the year 2022. The output should include the category, product, and total spend.
+
+product_spend Table:
+Column Name	Type
+category	string
+product	string
+user_id	integer
+spend	decimal
+transaction_date	timestamp
+product_spend Example Input:
+category	product	user_id	spend	transaction_date
+appliance	refrigerator	165	246.00	12/26/2021 12:00:00
+appliance	refrigerator	123	299.99	03/02/2022 12:00:00
+appliance	washing machine	123	219.80	03/02/2022 12:00:00
+electronics	vacuum	178	152.00	04/05/2022 12:00:00
+electronics	wireless headset	156	249.90	07/08/2022 12:00:00
+electronics	vacuum	145	189.00	07/15/2022 12:00:00
+Example Output:
+category	product	total_spend
+appliance	refrigerator	299.99
+appliance	washing machine	219.80
+electronics	vacuum	341.00
+electronics	wireless headset	249.90
+Explanation:
+Within the "appliance" category, the top two highest-grossing products are "refrigerator" and "washing machine."
+
+In the "electronics" category, the top two highest-grossing products are "vacuum" and "wireless headset."
+
+The dataset you are querying against may have different input & output - this is just an example!
+......................................
+
+
+
+
+Solution
+The first step to solving this Amazon question is writing Ace the Data Science Interview an Amazon review if you liked the book! 😉
+
+Step 1: Find the highest-grossing products by category and product
+
+To identify the highest-grossing products, we need to calculate the total spend for each category and product. We should also filter the transactions to only include those from the year 2022.
+
+SELECT 
+  category, 
+  product, 
+  SUM(spend) AS total_spend 
+FROM product_spend 
+WHERE EXTRACT(YEAR FROM transaction_date) = 2022
+GROUP BY category, product;
+category	product	total_spend
+appliance	refrigerator	299.99
+electronics	3.5mm headphone jack	7.99
+appliance	washing machine	439.80
+electronics	computer mouse	45.00
+electronics	vacuum	486.66
+appliance	microwave	49.99
+electronics	wireless headset	467.89
+This query provides a result that shows the total spend for each category and product combination.
+
+Step 2: Rank the products by total spend within each category
+
+To determine the ranking of products based on total spend within each category, we can utilize the RANK() window function within the same query.
+
+SELECT 
+  category, 
+  product, 
+  SUM(spend) AS total_spend,
+  RANK() OVER (
+    PARTITION BY category 
+    ORDER BY SUM(spend) DESC) AS ranking 
+FROM product_spend
+WHERE EXTRACT(YEAR FROM transaction_date) = 2022
+GROUP BY category, product;
+category	product	total_spend	ranking
+appliance	washing machine	439.80	1
+appliance	refrigerator	299.99	2
+appliance	microwave	49.99	3
+electronics	vacuum	486.66	1
+electronics	wireless headset	467.89	2
+electronics	computer mouse	45.00	3
+electronics	3.5mm headphone jack	7.99	4
+The result of this query includes the category, product, total spend, and the ranking of products within each category based on their total spend.
+
+Step 3: Filter for the top two highest-grossing products within each category
+
+Since we're interested in the top two highest-grossing products only, we can use the previous query as a CTE and filter for products with a ranking less than or equal to 2.
+
+WITH ranked_spending_cte AS (
+  SELECT 
+    category, 
+    product, 
+    SUM(spend) AS total_spend,
+    RANK() OVER (
+      PARTITION BY category 
+      ORDER BY SUM(spend) DESC) AS ranking 
+  FROM product_spend
+  WHERE EXTRACT(YEAR FROM transaction_date) = 2022
+  GROUP BY category, product
+)
+
+SELECT 
+  category, 
+  product, 
+  total_spend 
+FROM ranked_spending_cte 
+WHERE ranking <= 2 
+ORDER BY category, ranking;
+Solution #2: Using Subquery
+
+Here's an alternative approach using subquery.
+
+SELECT 
+  category, 
+  product, 
+  total_spend 
+FROM (
+  SELECT 
+    category, 
+    product, 
+    SUM(spend) AS total_spend,
+    RANK() OVER (
+      PARTITION BY category 
+      ORDER BY SUM(spend) DESC) AS ranking 
+  FROM product_spend
+  WHERE EXTRACT(YEAR FROM transaction_date) = 2022
+  GROUP BY category, product
+) AS ranked_spending
+WHERE ranking <= 2 
+ORDER BY category, ranking;
