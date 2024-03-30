@@ -1,0 +1,95 @@
+Easy
+
+Linkedin
+This is the same question as problem #8 in the SQL Chapter of Ace the Data Science Interview!
+
+Assume you're given a table containing job postings from various companies on the LinkedIn platform. Write a query to retrieve the count of companies that have posted duplicate job listings.
+
+Definition:
+
+Duplicate job listings are defined as two job listings within the same company that share identical titles and descriptions.
+job_listings Table:
+Column Name	Type
+job_id	integer
+company_id	integer
+title	string
+description	string
+job_listings Example Input:
+job_id	company_id	title	description
+248	827	Business Analyst	Business analyst evaluates past and current business data with the primary goal of improving decision-making processes within organizations.
+149	845	Business Analyst	Business analyst evaluates past and current business data with the primary goal of improving decision-making processes within organizations.
+945	345	Data Analyst	Data analyst reviews data to identify key insights into a business's customers and ways the data can be used to solve problems.
+164	345	Data Analyst	Data analyst reviews data to identify key insights into a business's customers and ways the data can be used to solve problems.
+172	244	Data Engineer	Data engineer works in a variety of settings to build systems that collect, manage, and convert raw data into usable information for data scientists and business analysts to interpret.
+Example Output:
+duplicate_companies
+1
+Explanation:
+There is one company ID 345 that posted duplicate job listings. The duplicate listings, IDs 945 and 164 have identical titles and descriptions.
+
+The dataset you are querying against may have different input & output - this is just an example!
+.....................................................
+
+
+
+
+Solution
+The first step to solving this LinkedIn problem statement is connecting with me on LinkedIn. 🥺
+
+Step 1: Identify companies with duplicate job listings
+
+But seriously, the first step is to determine which companies have posted duplicate job listings with the same title and description. We can do so by utilizing the COUNT() aggregate function to calculate the number of job_id entries grouped by company_id, title, and description.
+
+SELECT 
+  company_id, 
+  title, 
+  description, 
+  COUNT(job_id) AS job_count
+FROM job_listings
+GROUP BY company_id, title, description;
+The output may appear as follows:
+
+company_id	title	description	job_count
+827	Data Scientist	Data scientist uses data to understand and explain the phenomena around them, and help organizations make better decisions.	2
+244	Data Engineer	Data engineer works in a variety of settings to build systems that collect, manage, and convert raw data into usable information for data scientists and business analysts to interpret.	1
+845	Business Analyst	Business analyst evaluates past and current business data with the primary goal of improving decision-making processes within organizations.	1
+244	Software Engineer	Software engineers design and create computer systems and applications to solve real-world problems.	2
+345	Data Analyst	Data analyst reviews data to identify key insights into a business's customers and ways the data can be used to solve problems.	2
+Step 2: Filter for companies with duplicate job listings
+
+Next, we can proceed to filter the previous query by converting it into a Common Table Expression (CTE) and selecting only the rows where the job_count is greater than 1, indicating the presence of duplicate job listings.
+
+To obtain a count of unique companies, we apply the DISTINCT keyword on the company_id column.
+
+WITH job_count_cte AS (
+  SELECT 
+    company_id, 
+    title, 
+    description, 
+    COUNT(job_id) AS job_count
+  FROM job_listings
+  GROUP BY company_id, title, description
+)
+
+SELECT COUNT(DISTINCT company_id) AS duplicate_companies
+FROM job_count_cte
+WHERE job_count > 1;
+The output will present the count of companies with duplicate job listings:
+
+duplicate_companies
+3
+Method #2: Using Subquery
+
+Need a refresher on Subquery? Check out our tutorial!
+
+SELECT COUNT(DISTINCT company_id) AS duplicate_companies
+FROM (
+  SELECT 
+    company_id, 
+    title, 
+    description, 
+    COUNT(job_id) AS job_count
+  FROM job_listings
+  GROUP BY company_id, title, description
+) AS job_count_cte
+WHERE job_count > 1;
