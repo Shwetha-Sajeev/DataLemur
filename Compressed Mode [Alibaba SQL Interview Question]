@@ -1,0 +1,93 @@
+Medium
+
+Alibaba
+You're given a table containing the item count for each order on Alibaba, along with the frequency of orders that have the same item count. Write a query to retrieve the mode of the order occurrences. Additionally, if there are multiple item counts with the same mode, the results should be sorted in ascending order.
+
+Clarifications:
+
+item_count: Represents the number of items sold in each order.
+order_occurrences: Represents the frequency of orders with the corresponding number of items sold per order.
+For example, if there are 800 orders with 3 items sold in each order, the record would have an item_count of 3 and an order_occurrences of 800.
+Effective June 14th, 2023, the problem statement has been revised and additional clarification have been added for clarity.
+
+items_per_order Table:
+Column Name	Type
+item_count	integer
+order_occurrences	integer
+items_per_order Example Input:
+item_count	order_occurrences
+1	500
+2	1000
+3	800
+Example Output:
+mode
+2
+Explanation:
+Based on the example output, the order_occurrences value of 1000 corresponds to the highest frequency among all item counts. This means that item count of 2 has occurred 1000 times, making it the mode of order occurrences.
+
+The dataset you are querying against may have different input & output - this is just an example!
+...................................
+
+
+
+
+Solution
+To tackle the task of finding the mode of order occurrences more effectively, let's break it down into smaller steps.
+
+Step 1: Find the mode of order occurrences
+The mode represents the value with the highest frequency or the most common number of order occurrences. We can approach this in 2 ways:
+
+The first approach is to use the MAX() aggregate function, which gives us the maximum value in the order_occurrences field. This value represents the mode.
+
+Another approach is to utilize the MODE() WITHIN GROUP () function which determines the mode within a group of values. In our case, it finds the mode of the order_occurrences values. You can learn more about the function here.
+
+Executing either of these methods will provide us with the same result: the mode of order occurrences.
+
+Method #1: Using MAX()
+
+SELECT MAX(order_occurrences)
+FROM items_per_order;
+Method #2: Using MODE() WITHIN GROUP ()
+
+SELECT MODE() WITHIN GROUP (ORDER BY order_occurrences DESC)
+FROM items_per_order;
+Step 2: Match the mode to the corresponding item count
+Now, let's determine which item_count corresponds to the mode of order_occurrences. To do so, include item_count in the SELECT statement while filtering the results using either the MAX() or MODE() WITHIN GROUP () method.
+
+Method #1: Using MAX()
+
+SELECT item_count
+FROM items_per_order
+WHERE order_occurrences = (
+  SELECT MAX(order_occurrences) 
+  FROM items_per_order
+);
+Method #2: Using MODE() WITHIN GROUP ()
+
+SELECT item_count
+FROM items_per_order
+WHERE order_occurrences = (
+  SELECT MODE() WITHIN GROUP (ORDER BY order_occurrences DESC) 
+  FROM items_per_order
+);
+Step 3: Order the results by item count
+Finally, to sort the results by the corresponding item_count in ascending order, add the ORDER BY clause at the end of the query.
+
+Method #1: Using MAX()
+
+SELECT item_count AS mode
+FROM items_per_order
+WHERE order_occurrences = (
+  SELECT MAX(order_occurrences) 
+  FROM items_per_order
+)
+ORDER BY item_count;
+Method #2: Using MODE() WITHIN GROUP ()
+
+SELECT item_count AS mode
+FROM items_per_order
+WHERE order_occurrences = (
+  SELECT MODE() WITHIN GROUP (ORDER BY order_occurrences DESC) 
+  FROM items_per_order
+)
+ORDER BY item_count;
