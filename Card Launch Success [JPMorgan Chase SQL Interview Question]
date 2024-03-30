@@ -1,0 +1,84 @@
+Medium
+
+JPMorgan Chase
+Your team at JPMorgan Chase is soon launching a new credit card. You are asked to estimate how many cards you'll issue in the first month.
+
+Before you can answer this question, you want to first get some perspective on how well new credit card launches typically do in their first month.
+
+Write a query that outputs the name of the credit card, and how many cards were issued in its launch month. The launch month is the earliest record in the monthly_cards_issued table for a given card. Order the results starting from the biggest issued amount.
+
+monthly_cards_issued Table:
+Column Name	Type
+issue_month	integer
+issue_year	integer
+card_name	string
+issued_amount	integer
+monthly_cards_issued Example Input:
+issue_month	issue_year	card_name	issued_amount
+1	2021	Chase Sapphire Reserve	170000
+2	2021	Chase Sapphire Reserve	175000
+3	2021	Chase Sapphire Reserve	180000
+3	2021	Chase Freedom Flex	65000
+4	2021	Chase Freedom Flex	70000
+Example Output:
+card_name	issued_amount
+Chase Sapphire Reserve	170000
+Chase Freedom Flex	65000
+Explanation
+Chase Sapphire Reserve card was launched on 1/2021 with an issued amount of 170,000 cards and the Chase Freedom Flex card was launched on 3/2021 with an issued amount of 65,000 cards.
+
+The dataset you are querying against may have different input & output - this is just an example!
+...............................................
+
+
+
+
+Solution
+Step 1: Determining Launch Months and Years
+First, we need to find out the month and year each card was launched. This could be done by using the MIN() function.
+
+Hold on.. not so fast! If we would take the minimums for the year and month columns separately, the output wouldn't be accurate.
+
+For example in the table below, the launch month for the Chase Sapphire Reserve card could be wrongly interpreted as 1/2021 although it was launched earlier on 11/2020.
+
+card_name	issued_amount	issue_month	issue_year
+Chase Sapphire Reserve	150000	11	2020
+Chase Sapphire Reserve	160000	12	2020
+Chase Sapphire Reserve	170000	1	2021
+Chase Sapphire Reserve	175000	2	2021
+Chase Sapphire Reserve	180000	3	2021
+Thus, it is important to create a combination of the year and month using the MAKE_DATE() or CONCAT() functions. Read about the usage of MAKE_DATE() here and CONCAT() here.
+
+The following query shows the creation of the dates using MAKE_DATE(). As the table has no date column, we use 1 as the first day of the month.
+
+SELECT MAKE_DATE(issue_year, issue_month, 1)
+FROM monthly_cards_issued;
+Step 2: Obtaining Launch Dates
+Now we are ready to use the MIN() window function to obtain the launch dates. As the launch dates are different for both cards, it is important to partition by the card_name.
+
+SELECT 
+  card_name,
+  issued_amount,
+  MAKE_DATE(issue_year, issue_month, 1) AS issue_date,
+  MIN(MAKE_DATE(issue_year, issue_month, 1)) OVER (
+    PARTITION BY card_name) AS launch_date
+FROM monthly_cards_issued;
+Step 3
+For the next step, simply create a CTE from the previous query and select the records where the issue_date is equal to the launch_date using = comparison operators. Finally, order the results from the biggest to the lowest issued amount.
+
+WITH card_launch AS (
+  SELECT 
+    card_name,
+    issued_amount,
+    MAKE_DATE(issue_year, issue_month, 1) AS issue_date,
+    MIN(MAKE_DATE(issue_year, issue_month, 1)) OVER (
+      PARTITION BY card_name) AS launch_date
+  FROM monthly_cards_issued
+)
+
+SELECT 
+  card_name, 
+  issued_amount
+FROM card_launch
+WHERE issue_date = launch_date
+ORDER BY issued_amount DESC;
